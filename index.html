@@ -48,8 +48,16 @@ button {
   background: #a0e7e5;
   cursor: pointer;
   transition: 0.2s;
-  min-width: 220px;
-  display: inline-block;
+  min-width: 260px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: 16px;
+}
+
+button span.icon {
+  margin-right: 10px;
+  font-size: 20px;
 }
 
 button:hover {
@@ -141,20 +149,20 @@ button.correct {
 </div>
 
 <script>
-// GAME DATA
+// GAME DATA WITH ICONS
 const stepsList = [
-"Prepare and level the land",
-"Lay the foundation",
-"Build the structure",
-"Add the Walls",
-"Install a roof",
-"Add the doors and windows",
-"Install water pipes and a shower",
-"Finish the wiring",
-"Install lights",
-"Add a gas pipe",
-"Paint the walls",
-"Polish the floors"
+  { text: "Prepare and level the land", icon: "🌱" },
+  { text: "Lay the foundation", icon: "🧱" },
+  { text: "Build the structure", icon: "🏗️" },
+  { text: "Add the Walls", icon: "🧱" },
+  { text: "Install a roof", icon: "🏠" },
+  { text: "Add the doors and windows", icon: "🚪" },
+  { text: "Install water pipes and a shower", icon: "🚿" },
+  { text: "Finish the wiring", icon: "💡" },
+  { text: "Install lights", icon: "🔌" },
+  { text: "Add a gas pipe", icon: "🔥" },
+  { text: "Paint the walls", icon: "🎨" },
+  { text: "Polish the floors", icon: "🪞" }
 ];
 
 let current, time, money, energy, gameOver;
@@ -186,24 +194,23 @@ function loadSteps() {
   div.innerHTML = "";
 
   // Shuffle steps
-  [...stepsList].sort(() => Math.random() - 0.5).forEach(step => {
+  [...stepsList].sort(() => Math.random() - 0.5).forEach((stepObj, index) => {
     let btn = document.createElement("button");
-    btn.innerText = step;
+    btn.innerHTML = `<span class="icon">${stepObj.icon}</span>${stepObj.text}`;
 
-    // if it's already correctly selected, mark as grey
-    if (stepsList.indexOf(step) < current) btn.classList.add("correct");
+    // mark already completed as grey
+    if (index < current) btn.classList.add("correct");
 
-    btn.onclick = () => handleStep(step, btn);
+    btn.onclick = () => handleStep(stepObj, btn);
     div.appendChild(btn);
   });
 }
 
 // HANDLE STEP
-function handleStep(step, btn) {
+function handleStep(stepObj, btn) {
   if (gameOver) return;
 
-  // only mark correct steps as grey
-  if (step === stepsList[current]) {
+  if (stepObj === stepsList[current]) {
     btn.classList.add("correct"); // correct step turns grey
     current++;
     energy -= 5;
@@ -225,7 +232,6 @@ function handleStep(step, btn) {
     time -= 4;
     alert("❌ Wrong order! Try again.");
     updateStats();
-    // wrong step stays tappable
   }
 }
 
