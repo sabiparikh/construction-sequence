@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>🏗️ Building Mission Game</title>
-
 <style>
 body {
-  font-family: Arial;
+  font-family: Arial, sans-serif;
   text-align: center;
   background: linear-gradient(135deg, #ffd6e0, #d6f0ff);
   margin: 0;
@@ -18,14 +17,39 @@ body {
   padding: 20px;
 }
 
+h1 {
+  margin-bottom: 10px;
+}
+
+.scorecard {
+  background: #ffffffdd;
+  border-radius: 12px;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-around;
+  font-weight: bold;
+  font-size: 18px;
+  margin: 15px 0;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.scorecard div span {
+  display: block;
+  font-size: 28px; /* bigger numbers */
+  color: #333;
+  margin-top: 5px;
+}
+
 button {
   padding: 10px 14px;
   margin: 6px;
   border-radius: 10px;
-  border: none;
+  border: 2px solid #555;
   background: #a0e7e5;
   cursor: pointer;
   transition: 0.2s;
+  min-width: 220px;
+  display: inline-block;
 }
 
 button:hover {
@@ -33,11 +57,10 @@ button:hover {
   transform: scale(1.05);
 }
 
-.stats {
-  display: flex;
-  justify-content: space-around;
-  margin: 15px;
-  font-weight: bold;
+button.correct {
+  background: #999999;
+  color: #eee;
+  cursor: default;
 }
 
 .bar {
@@ -74,21 +97,28 @@ button:hover {
   display: none;
   background: #ffd166;
   font-weight: bold;
+  padding: 12px 20px;
+  font-size: 18px;
+  border-radius: 12px;
+  border: 2px solid #555;
+  cursor: pointer;
+}
+
+#steps {
+  margin: 20px 0;
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
-
 <h1>🏗️ Building Mission</h1>
 <p>Finish the building before the robots!</p>
 
-<div class="stats">
-  ⏱️ Days: <span id="time"></span>
-  💰 Money: ₹<span id="money"></span>
-  ⚡ Energy: <span id="energy"></span>
+<div class="scorecard">
+  <div>⏱️ Days: <span id="time"></span></div>
+  <div>💰 Money: ₹<span id="money"></span></div>
+  <div>⚡ Energy: <span id="energy"></span></div>
 </div>
 
 <h3 id="event"></h3>
@@ -108,11 +138,9 @@ button:hover {
 </div>
 
 <button id="restartBtn">🔄 Play Again</button>
-
 </div>
 
 <script>
-
 // GAME DATA
 const stepsList = [
 "Prepare and level the land",
@@ -157,19 +185,26 @@ function loadSteps() {
   const div = document.getElementById("steps");
   div.innerHTML = "";
 
+  // Shuffle steps
   [...stepsList].sort(() => Math.random() - 0.5).forEach(step => {
     let btn = document.createElement("button");
     btn.innerText = step;
-    btn.onclick = () => handleStep(step);
+
+    // if it's already correctly selected, mark as grey
+    if (stepsList.indexOf(step) < current) btn.classList.add("correct");
+
+    btn.onclick = () => handleStep(step, btn);
     div.appendChild(btn);
   });
 }
 
 // HANDLE STEP
-function handleStep(step) {
+function handleStep(step, btn) {
   if (gameOver) return;
 
+  // only mark correct steps as grey
   if (step === stepsList[current]) {
+    btn.classList.add("correct"); // correct step turns grey
     current++;
     energy -= 5;
     time -= 1;
@@ -184,17 +219,17 @@ function handleStep(step) {
     }
 
     loadSteps();
-
   } else {
     money -= 100;
     energy -= 20;
     time -= 4;
-    alert("❌ Wrong order!");
+    alert("❌ Wrong order! Try again.");
     updateStats();
+    // wrong step stays tappable
   }
 }
 
-// EVENTS (CHOICE-BASED)
+// EVENTS
 function triggerEvents() {
   let text = "";
 
@@ -219,7 +254,7 @@ function triggerEvents() {
   document.getElementById("event").innerText = text;
 }
 
-// UPDATE
+// UPDATE STATS
 function updateStats() {
   document.getElementById("time").innerText = time;
   document.getElementById("money").innerText = money;
@@ -230,6 +265,7 @@ function updateStats() {
   }
 }
 
+// UPDATE PLAYER PROGRESS
 function updateProgress() {
   document.getElementById("you").style.width =
     (current / stepsList.length) * 100 + "%";
@@ -286,8 +322,6 @@ document.getElementById("restartBtn").onclick = initGame;
 
 // START
 initGame();
-
 </script>
-
 </body>
 </html>
