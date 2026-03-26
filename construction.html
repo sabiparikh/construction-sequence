@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Constructing a Building Game</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #fcefee, #e0f7fa);
+        text-align: center;
+        margin: 0;
+        padding: 20px;
+    }
+
+    h1 {
+        color: #6a5acd;
+    }
+
+    .stats {
+        background: #ffffffcc;
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: inline-block;
+    }
+
+    button {
+        background: #ffd1dc;
+        border: none;
+        padding: 10px 15px;
+        margin: 5px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    button:hover {
+        background: #ffb6c1;
+    }
+
+    .disabled {
+        background: #ddd;
+        cursor: not-allowed;
+    }
+
+    #message {
+        margin-top: 15px;
+        font-weight: bold;
+    }
+
+    canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+    }
+</style>
+</head>
+<body>
+
+<h1>🏗️ Constructing a Building</h1>
+
+<div class="stats">
+    ⏳ Time: <span id="time">28</span> days<br>
+    💰 Money: ₹<span id="money">1500</span><br>
+    ⚡ Energy: <span id="energy">120</span>
+</div>
+
+<h3>Select the correct next step:</h3>
+<div id="steps"></div>
+
+<div id="message"></div>
+
+<canvas id="confetti"></canvas>
+
+<script>
+const steps = [
+    "Prepare and level up the land",
+    "Lay the foundation",
+    "Build the structure",
+    "Add the Walls",
+    "Install a roof",
+    "Add the doors and windows",
+    "Install water pipes and a shower",
+    "Finish the wiring",
+    "Install lights",
+    "Add a gas pipe",
+    "Paint the walls",
+    "Polish the floors"
+];
+
+let currentStep = 0;
+
+let time = 28;
+let money = 1500;
+let energy = 120;
+
+// Unexpected events
+time -= 7; // GRAP
+money -= 500; // rainstorm
+
+updateStats();
+
+function updateStats() {
+    document.getElementById("time").innerText = time;
+    document.getElementById("money").innerText = money;
+    document.getElementById("energy").innerText = energy;
+}
+
+function renderSteps() {
+    const container = document.getElementById("steps");
+    container.innerHTML = "";
+
+    steps.forEach((step, index) => {
+        const btn = document.createElement("button");
+        btn.innerText = step;
+
+        btn.onclick = () => handleStep(index);
+
+        if (index < currentStep) {
+            btn.classList.add("disabled");
+        }
+
+        container.appendChild(btn);
+    });
+}
+
+function handleStep(index) {
+    if (index === currentStep) {
+        // Correct
+        currentStep++;
+        time -= 2;
+        energy -= 5;
+        money -= 50;
+
+        document.getElementById("message").innerText = "✅ Correct!";
+        launchConfetti();
+
+        if (currentStep === steps.length) {
+            document.getElementById("message").innerText = "🎉 You built the house successfully!";
+        }
+
+    } else {
+        // Wrong
+        time -= 4;
+        energy -= 20;
+        money -= 100;
+
+        document.getElementById("message").innerText = "❌ Wrong order! Penalty applied.";
+    }
+
+    if (time <= 0 || money <= 0 || energy <= 0) {
+        document.getElementById("message").innerText = "💀 Game Over!";
+    }
+
+    updateStats();
+    renderSteps();
+}
+
+renderSteps();
+
+/* CONFETTI */
+const canvas = document.getElementById("confetti");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let confetti = [];
+
+function launchConfetti() {
+    for (let i = 0; i < 100; i++) {
+        confetti.push({
+            x: Math.random() * canvas.width,
+            y: 0,
+            r: Math.random() * 6 + 2,
+            d: Math.random() * 50,
+            color: `hsl(${Math.random()*360}, 70%, 80%)`,
+            tilt: Math.random() * 10 - 10
+        });
+    }
+}
+
+function drawConfetti() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    confetti.forEach((c, i) => {
+        ctx.beginPath();
+        ctx.fillStyle = c.color;
+        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        c.y += 2;
+        c.x += Math.sin(c.d);
+
+        if (c.y > canvas.height) {
+            confetti.splice(i, 1);
+        }
+    });
+
+    requestAnimationFrame(drawConfetti);
+}
+
+drawConfetti();
+</script>
+
+</body>
+</html>
+
