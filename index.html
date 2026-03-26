@@ -1,4 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🏗️ Building Mission Game</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: linear-gradient(135deg, #ffd6e0, #d6f0ff);
+  margin: 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
+
+h1 { margin-bottom: 10px; }
+
+.scorecard {
+  background: #ffffffdd;
+  border-radius: 12px;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-around;
+  font-weight: bold;
+  font-size: 18px;
+  margin: 15px 0;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.scorecard div span {
+  display: block;
+  font-size: 28px;
+  color: #333;
+  margin-top: 5px;
+}
+
+button {
+  padding: 10px 14px;
+  margin: 6px;
+  border-radius: 10px;
+  border: 2px solid #555;
+  background: #a0e7e5;
+  cursor: pointer;
+  transition: 0.2s;
+  min-width: 260px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: 16px;
+}
+
+button span.icon {
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+button:hover {
+  background: #ffafcc;
+  transform: scale(1.05);
+}
+
+button.correct {
+  background: #999999;
+  color: #eee;
+  cursor: default;
+}
+
+.bar {
+  background: #ddd;
+  height: 20px;
+  border-radius: 10px;
+  margin: 5px 0;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ff90b3, #ff4d6d);
+  transition: width 0.5s;
+}
+
+#message {
+  margin-top: 10px;
+  font-size: 18px;
+  color: red;
+  min-height: 24px;
+}
+
+.confetti {
+  position: fixed;
+  top: -10px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation: fall linear forwards;
+}
+
+@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+#restartBtn {
+  display: none;
+  background: #ffd166;
+  font-weight: bold;
+  padding: 12px 20px;
+  font-size: 18px;
+  border-radius: 12px;
+  border: 2px solid #555;
+  cursor: pointer;
+}
+
+#steps { margin: 20px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🏗️ Building Mission</h1>
+<p>Finish the building before the robots!</p>
+
+<div class="scorecard">
+  <div>⏱️ Days: <span id="time"></span></div>
+  <div>💰 Money: ₹<span id="money"></span></div>
+  <div>⚡ Energy: <span id="energy"></span></div>
+</div>
+
+<h3 id="event"></h3>
+
+<h2>Choose the correct next step:</h2>
+<div id="steps"></div>
+<div id="message"></div>
+
+<div>
+  🤖 Robot 1
+  <div class="bar"><div id="r1" class="fill"></div></div>
+
+  🤖 Robot 2
+  <div class="bar"><div id="r2" class="fill"></div></div>
+
+  🧑 You
+  <div class="bar"><div id="you" class="fill"></div></div>
+</div>
+
+<button id="restartBtn">🔄 Play Again</button>
+</div>
+
 <script>
+// GAME DATA
+const stepsList = [
+  { text: "Prepare and level the land", icon: "🌱" },
+  { text: "Lay the foundation", icon: "🧱" },
+  { text: "Build the structure", icon: "🏗️" },
+  { text: "Add the Walls", icon: "🧱" },
+  { text: "Install a roof", icon: "🏠" },
+  { text: "Add the doors and windows", icon: "🚪" },
+  { text: "Install water pipes and a shower", icon: "🚿" },
+  { text: "Finish the wiring", icon: "💡" },
+  { text: "Install lights", icon: "🔌" },
+  { text: "Add a gas pipe", icon: "🔥" },
+  { text: "Paint the walls", icon: "🎨" },
+  { text: "Polish the floors", icon: "🪞" }
+];
+
+let current, time, money, energy, gameOver;
+let shuffledSteps;
+
 // SHUFFLE UTILITY
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -8,9 +175,7 @@ function shuffle(array) {
   return array;
 }
 
-// SHUFFLED STEPS
-let shuffledSteps;
-
+// INIT GAME
 function initGame() {
   current = 0;
   time = 28;
@@ -20,6 +185,7 @@ function initGame() {
 
   document.getElementById("restartBtn").style.display = "none";
   document.getElementById("event").innerText = "";
+  document.getElementById("message").innerText = "";
 
   ["r1","r2","you"].forEach(id=>{
     document.getElementById(id).style.width = "0%";
@@ -27,7 +193,6 @@ function initGame() {
 
   updateStats();
 
-  // Shuffle steps for display but keep track of original order
   shuffledSteps = shuffle([...stepsList.map((s, i) => ({...s, originalIndex: i}))]);
   loadSteps();
 }
@@ -39,11 +204,10 @@ function loadSteps() {
   const div = document.getElementById("steps");
   div.innerHTML = "";
 
-  shuffledSteps.forEach((stepObj) => {
+  shuffledSteps.forEach(stepObj => {
     let btn = document.createElement("button");
     btn.innerHTML = `<span class="icon">${stepObj.icon}</span>${stepObj.text}`;
 
-    // Grey out only if this step has already been correctly completed
     if(stepObj.originalIndex < current) btn.classList.add("correct");
 
     btn.onclick = () => handleStep(stepObj, btn);
@@ -51,12 +215,15 @@ function loadSteps() {
   });
 }
 
-// HANDLE STEP
+// HANDLE STEP CLICK
 function handleStep(stepObj, btn) {
   if (gameOver) return;
 
+  const messageEl = document.getElementById("message");
+  messageEl.innerText = "";
+
   if (stepObj.originalIndex === current) {
-    btn.classList.add("correct"); // Turn grey only if correct step
+    btn.classList.add("correct");
     current++;
     energy -= 5;
     time -= 1;
@@ -66,17 +233,100 @@ function handleStep(stepObj, btn) {
     updateProgress();
     confettiBurst();
 
-    if (current === stepsList.length) {
-      endGame("🏆 You Win!");
-    }
+    if (current === stepsList.length) endGame("🏆 You Win!");
 
-    loadSteps(); // reload buttons with already correct ones grey
+    loadSteps();
   } else {
     money -= 100;
     energy -= 20;
     time -= 4;
-    alert("❌ Wrong order! Try again.");
+    messageEl.innerText = "❌ Wrong order! Try again.";
     updateStats();
   }
 }
+
+// EVENTS
+function triggerEvents() {
+  let text = "";
+  if (current === 3) {
+    let c = confirm("⚠️ GRAP 3 imposed!\nOK = Work illegally\nCancel = Shut 7 days");
+    if (c) { money -= 300; text="🚧 Worked illegally (-₹300)"; }
+    else { time -= 7; text="⛔ Shut for 7 days"; }
+  }
+  if (current === 6) {
+    let c = confirm("🌧️ Rain!\nOK = Pay ₹500\nCancel = Stop 2 days");
+    if (c) { money -= 500; text="💸 Paid ₹500"; }
+    else { time -= 2; text="⏱️ Delayed 2 days"; }
+  }
+  if (current === 9) {
+    let c = confirm("🏢 MCD Visit!\nOK = Pay ₹300\nCancel = Stop 3 days");
+    if (c) { money -= 300; text="💰 Paid ₹300"; }
+    else { time -= 3; text="🛑 Work stopped 3 days"; }
+  }
+  document.getElementById("event").innerText = text;
+}
+
+// UPDATE STATS
+function updateStats() {
+  document.getElementById("time").innerText = time;
+  document.getElementById("money").innerText = money;
+  document.getElementById("energy").innerText = energy;
+
+  if (time <= 0 || money <= 0 || energy <= 0) endGame("💀 Game Over!");
+}
+
+// UPDATE PLAYER PROGRESS
+function updateProgress() {
+  document.getElementById("you").style.width =
+    (current / stepsList.length) * 100 + "%";
+}
+
+// ROBOTS
+setInterval(() => {
+  if (gameOver) return;
+
+  let r1 = document.getElementById("r1");
+  let r2 = document.getElementById("r2");
+
+  let w1 = (parseFloat(r1.style.width) || 0) + 2;
+  let w2 = (parseFloat(r2.style.width) || 0) + 3;
+
+  r1.style.width = w1 + "%";
+  r2.style.width = w2 + "%";
+
+  if (w1 >= 100) endGame("🤖 Robot 1 Wins!");
+  if (w2 >= 100) endGame("🤖 Robot 2 Wins!");
+}, 2000);
+
+// END GAME
+function endGame(msg) {
+  gameOver = true;
+  document.getElementById("message").innerText = msg;
+  document.getElementById("steps").innerHTML = "";
+  document.getElementById("restartBtn").style.display = "inline-block";
+}
+
+// CONFETTI
+function confettiBurst() {
+  for (let i = 0; i < 40; i++) {
+    let c = document.createElement("div");
+    c.className = "confetti";
+    let size = Math.random() * 8 + 4;
+    c.style.width = size + "px";
+    c.style.height = size + "px";
+    c.style.left = Math.random() * 100 + "%";
+    c.style.background = `hsl(${Math.random()*360}, 90%, 60%)`;
+    c.style.animationDuration = (Math.random()*2+2)+"s";
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 4000);
+  }
+}
+
+// RESTART
+document.getElementById("restartBtn").onclick = initGame;
+
+// START
+initGame();
 </script>
+</body>
+</html>
