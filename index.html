@@ -2,207 +2,292 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Constructing a Building Game</title>
+<title>🏗️ Building Mission Game</title>
+
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: linear-gradient(135deg, #fcefee, #e0f7fa);
-        text-align: center;
-        margin: 0;
-        padding: 20px;
-    }
+body {
+  font-family: Arial;
+  text-align: center;
+  background: linear-gradient(135deg, #ffd6e0, #d6f0ff);
+  margin: 0;
+}
 
-    h1 {
-        color: #6a5acd;
-    }
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
 
-    .stats {
-        background: #ffffffcc;
-        padding: 15px;
-        border-radius: 12px;
-        margin-bottom: 20px;
-        display: inline-block;
-    }
+button {
+  padding: 10px 14px;
+  margin: 6px;
+  border-radius: 10px;
+  border: none;
+  background: #a0e7e5;
+  cursor: pointer;
+  transition: 0.2s;
+}
 
-    button {
-        background: #ffd1dc;
-        border: none;
-        padding: 10px 15px;
-        margin: 5px;
-        border-radius: 10px;
-        cursor: pointer;
-        transition: 0.3s;
-    }
+button:hover {
+  background: #ffafcc;
+  transform: scale(1.05);
+}
 
-    button:hover {
-        background: #ffb6c1;
-    }
+.stats {
+  display: flex;
+  justify-content: space-around;
+  margin: 15px;
+  font-weight: bold;
+}
 
-    .disabled {
-        background: #ddd;
-        cursor: not-allowed;
-    }
+.bar {
+  background: #ddd;
+  height: 20px;
+  border-radius: 10px;
+  margin: 5px 0;
+  overflow: hidden;
+}
 
-    #message {
-        margin-top: 15px;
-        font-weight: bold;
-    }
+.fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ff90b3, #ff4d6d);
+  transition: width 0.5s;
+}
 
-    canvas {
-        position: fixed;
-        top: 0;
-        left: 0;
-        pointer-events: none;
-    }
+/* Confetti */
+.confetti {
+  position: fixed;
+  top: -10px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation: fall linear forwards;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+  }
+}
+
+#restartBtn {
+  display: none;
+  background: #ffd166;
+  font-weight: bold;
+}
 </style>
 </head>
+
 <body>
 
-<h1>🏗️ Constructing a Building</h1>
+<div class="container">
+
+<h1>🏗️ Building Mission</h1>
+<p>Finish the building before the robots!</p>
 
 <div class="stats">
-    ⏳ Time: <span id="time">28</span> days<br>
-    💰 Money: ₹<span id="money">1500</span><br>
-    ⚡ Energy: <span id="energy">120</span>
+  ⏱️ Days: <span id="time"></span>
+  💰 Money: ₹<span id="money"></span>
+  ⚡ Energy: <span id="energy"></span>
 </div>
 
-<h3>Select the correct next step:</h3>
+<h3 id="event"></h3>
+
+<h2>Choose the correct next step:</h2>
 <div id="steps"></div>
 
-<div id="message"></div>
+<div>
+  🤖 Robot 1
+  <div class="bar"><div id="r1" class="fill"></div></div>
 
-<canvas id="confetti"></canvas>
+  🤖 Robot 2
+  <div class="bar"><div id="r2" class="fill"></div></div>
+
+  🧑 You
+  <div class="bar"><div id="you" class="fill"></div></div>
+</div>
+
+<button id="restartBtn">🔄 Play Again</button>
+
+</div>
 
 <script>
-const steps = [
-    "Prepare and level up the land",
-    "Lay the foundation",
-    "Build the structure",
-    "Add the Walls",
-    "Install a roof",
-    "Add the doors and windows",
-    "Install water pipes and a shower",
-    "Finish the wiring",
-    "Install lights",
-    "Add a gas pipe",
-    "Paint the walls",
-    "Polish the floors"
+
+// GAME DATA
+const stepsList = [
+"Prepare and level the land",
+"Lay the foundation",
+"Build the structure",
+"Add the Walls",
+"Install a roof",
+"Add the doors and windows",
+"Install water pipes and a shower",
+"Finish the wiring",
+"Install lights",
+"Add a gas pipe",
+"Paint the walls",
+"Polish the floors"
 ];
 
-let currentStep = 0;
+let current, time, money, energy, gameOver;
 
-let time = 28;
-let money = 1500;
-let energy = 120;
+// INIT
+function initGame() {
+  current = 0;
+  time = 28;
+  money = 1500;
+  energy = 120;
+  gameOver = false;
 
-// Unexpected events
-time -= 7; // GRAP
-money -= 500; // rainstorm
+  document.getElementById("restartBtn").style.display = "none";
+  document.getElementById("event").innerText = "";
 
-updateStats();
+  ["r1","r2","you"].forEach(id=>{
+    document.getElementById(id).style.width = "0%";
+  });
 
-function updateStats() {
-    document.getElementById("time").innerText = time;
-    document.getElementById("money").innerText = money;
-    document.getElementById("energy").innerText = energy;
+  updateStats();
+  loadSteps();
 }
 
-function renderSteps() {
-    const container = document.getElementById("steps");
-    container.innerHTML = "";
+// LOAD BUTTONS
+function loadSteps() {
+  if (gameOver) return;
 
-    steps.forEach((step, index) => {
-        const btn = document.createElement("button");
-        btn.innerText = step;
+  const div = document.getElementById("steps");
+  div.innerHTML = "";
 
-        btn.onclick = () => handleStep(index);
-
-        if (index < currentStep) {
-            btn.classList.add("disabled");
-        }
-
-        container.appendChild(btn);
-    });
+  [...stepsList].sort(() => Math.random() - 0.5).forEach(step => {
+    let btn = document.createElement("button");
+    btn.innerText = step;
+    btn.onclick = () => handleStep(step);
+    div.appendChild(btn);
+  });
 }
 
-function handleStep(index) {
-    if (index === currentStep) {
-        // Correct
-        currentStep++;
-        time -= 2;
-        energy -= 5;
-        money -= 50;
+// HANDLE STEP
+function handleStep(step) {
+  if (gameOver) return;
 
-        document.getElementById("message").innerText = "✅ Correct!";
-        launchConfetti();
+  if (step === stepsList[current]) {
+    current++;
+    energy -= 5;
+    time -= 1;
 
-        if (currentStep === steps.length) {
-            document.getElementById("message").innerText = "🎉 You built the house successfully!";
-        }
-
-    } else {
-        // Wrong
-        time -= 4;
-        energy -= 20;
-        money -= 100;
-
-        document.getElementById("message").innerText = "❌ Wrong order! Penalty applied.";
-    }
-
-    if (time <= 0 || money <= 0 || energy <= 0) {
-        document.getElementById("message").innerText = "💀 Game Over!";
-    }
-
+    triggerEvents();
     updateStats();
-    renderSteps();
-}
+    updateProgress();
+    confettiBurst();
 
-renderSteps();
-
-/* CONFETTI */
-const canvas = document.getElementById("confetti");
-const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let confetti = [];
-
-function launchConfetti() {
-    for (let i = 0; i < 100; i++) {
-        confetti.push({
-            x: Math.random() * canvas.width,
-            y: 0,
-            r: Math.random() * 6 + 2,
-            d: Math.random() * 50,
-            color: `hsl(${Math.random()*360}, 70%, 80%)`,
-            tilt: Math.random() * 10 - 10
-        });
+    if (current === stepsList.length) {
+      endGame("🏆 You Win!");
     }
+
+    loadSteps();
+
+  } else {
+    money -= 100;
+    energy -= 20;
+    time -= 4;
+    alert("❌ Wrong order!");
+    updateStats();
+  }
 }
 
-function drawConfetti() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+// EVENTS (CHOICE-BASED)
+function triggerEvents() {
+  let text = "";
 
-    confetti.forEach((c, i) => {
-        ctx.beginPath();
-        ctx.fillStyle = c.color;
-        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-        ctx.fill();
+  if (current === 3) {
+    let c = confirm("⚠️ GRAP 3 imposed!\nOK = Work illegally\nCancel = Shut 7 days");
+    if (c) { money -= 300; text="🚧 Worked illegally (-₹300)"; }
+    else { time -= 7; text="⛔ Shut for 7 days"; }
+  }
 
-        c.y += 2;
-        c.x += Math.sin(c.d);
+  if (current === 6) {
+    let c = confirm("🌧️ Rain!\nOK = Pay ₹500\nCancel = Stop 2 days");
+    if (c) { money -= 500; text="💸 Paid ₹500"; }
+    else { time -= 2; text="⏱️ Delayed 2 days"; }
+  }
 
-        if (c.y > canvas.height) {
-            confetti.splice(i, 1);
-        }
-    });
+  if (current === 9) {
+    let c = confirm("🏢 MCD Visit!\nOK = Pay ₹300\nCancel = Stop 3 days");
+    if (c) { money -= 300; text="💰 Paid ₹300"; }
+    else { time -= 3; text="🛑 Work stopped 3 days"; }
+  }
 
-    requestAnimationFrame(drawConfetti);
+  document.getElementById("event").innerText = text;
 }
 
-drawConfetti();
+// UPDATE
+function updateStats() {
+  document.getElementById("time").innerText = time;
+  document.getElementById("money").innerText = money;
+  document.getElementById("energy").innerText = energy;
+
+  if (time <= 0 || money <= 0 || energy <= 0) {
+    endGame("💀 Game Over!");
+  }
+}
+
+function updateProgress() {
+  document.getElementById("you").style.width =
+    (current / stepsList.length) * 100 + "%";
+}
+
+// ROBOTS
+setInterval(() => {
+  if (gameOver) return;
+
+  let r1 = document.getElementById("r1");
+  let r2 = document.getElementById("r2");
+
+  let w1 = (parseFloat(r1.style.width) || 0) + 2;
+  let w2 = (parseFloat(r2.style.width) || 0) + 3;
+
+  r1.style.width = w1 + "%";
+  r2.style.width = w2 + "%";
+
+  if (w1 >= 100) endGame("🤖 Robot 1 Wins!");
+  if (w2 >= 100) endGame("🤖 Robot 2 Wins!");
+
+}, 2000);
+
+// END GAME
+function endGame(msg) {
+  gameOver = true;
+  alert(msg);
+  document.getElementById("steps").innerHTML = "";
+  document.getElementById("restartBtn").style.display = "inline-block";
+}
+
+// CONFETTI
+function confettiBurst() {
+  for (let i = 0; i < 40; i++) {
+    let c = document.createElement("div");
+    c.className = "confetti";
+
+    let size = Math.random() * 8 + 4;
+    c.style.width = size + "px";
+    c.style.height = size + "px";
+
+    c.style.left = Math.random() * 100 + "%";
+    c.style.background = `hsl(${Math.random()*360}, 90%, 60%)`;
+
+    c.style.animationDuration = (Math.random()*2+2)+"s";
+
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 4000);
+  }
+}
+
+// RESTART
+document.getElementById("restartBtn").onclick = initGame;
+
+// START
+initGame();
+
 </script>
 
 </body>
 </html>
-
