@@ -7,10 +7,11 @@
 
 <style>
 body{font-family:Lato,sans-serif;background:#fff;color:#000;text-align:center;padding:10px;}
-h1{font-size:44px;font-weight:900;margin:5px;}
-.container{max-width:600px;margin:auto;}
+h1{font-size:46px;font-weight:900;margin:5px;}
+.container{max-width:650px;margin:auto;}
 .stats{display:flex;justify-content:space-between;font-weight:700;margin:10px 0;}
 button{width:100%;padding:14px;margin:6px 0;border:2px solid black;background:white;font-size:16px;cursor:pointer;}
+#penalty{display:none;border:3px solid black;padding:10px;margin:10px;font-weight:bold;}
 .eventBox{border:3px dashed black;padding:12px;margin:10px;display:none;}
 #restart{display:none;margin-top:15px;font-weight:bold;}
 </style>
@@ -18,14 +19,17 @@ button{width:100%;padding:14px;margin:6px 0;border:2px solid black;background:wh
 
 <body>
 <div class="container">
+
 <h1>BUILD A HOUSE</h1>
-<p>Build the house in correct order before resources run out.</p>
+<p>Finish all steps in correct order before resources run out.</p>
 
 <div class="stats">
 <div>Days: <span id="time">28</span></div>
 <div>₹: <span id="money">1500</span></div>
 <div>Energy: <span id="energy">120</span></div>
 </div>
+
+<div id="penalty">⚠ Wrong Step! -4 Days | -₹100 | -20 Energy</div>
 
 <h3>Completed Steps</h3>
 <div id="completed"></div>
@@ -34,6 +38,7 @@ button{width:100%;padding:14px;margin:6px 0;border:2px solid black;background:wh
 <div id="buttons"></div>
 
 <button id="restart" onclick="location.reload()">PLAY AGAIN</button>
+
 </div>
 
 <script>
@@ -44,9 +49,8 @@ let steps=["Clean land","Build base","Build frame","Add walls","Add roof",
 
 let correct=[...steps];
 shuffle(steps);
-let index=0;
-let completedList=[];
-let gameEnded=false;
+let completed=[];
+let gameOver=false;
 
 function shuffle(a){
  for(let i=a.length-1;i>0;i--){
@@ -56,68 +60,76 @@ function shuffle(a){
 }
 
 function drawButtons(){
- if(gameEnded) return;
+ if(gameOver) return;
  let box=document.getElementById("buttons");
  box.innerHTML="";
  steps.forEach(step=>{
-   if(!completedList.includes(step)){
-     let btn=document.createElement("button");
-     btn.innerText=step;
-     btn.onclick=()=>choose(step);
-     box.appendChild(btn);
-   }
+  if(!completed.includes(step)){
+   let btn=document.createElement("button");
+   btn.innerText=step;
+   btn.onclick=()=>choose(step);
+   box.appendChild(btn);
+  }
  });
 }
 
 function choose(step){
- if(gameEnded) return;
- if(step===correct[index]){
-   index++;
-   completedList.push(step);
-   time-=2;energy-=10;money-=50;
-   updateCompleted();
+ if(gameOver) return;
+
+ completed.push(step);
+
+ if(step===correct[completed.length-1]){
+  time-=2; energy-=10; money-=50;
  }else{
-   time-=4;energy-=20;money-=100;
+  time-=4; energy-=20; money-=100;
+  showPenalty();
  }
- updateStats();
+
+ updateUI();
+ checkGameOver();
  drawButtons();
- checkGame();
+
+ if(!gameOver && completed.length===correct.length){
+   endGame("🏡 HOUSE COMPLETED!");
+ }
 }
 
-function updateCompleted(){
- document.getElementById("completed").innerHTML=
- completedList.map(s=>"✔ "+s).join("<br>");
+function showPenalty(){
+ let p=document.getElementById("penalty");
+ p.style.display="block";
+ setTimeout(()=>p.style.display="none",2000);
 }
 
-function updateStats(){
+function updateUI(){
  document.getElementById("time").innerText=Math.max(0,time);
  document.getElementById("money").innerText=Math.max(0,money);
  document.getElementById("energy").innerText=Math.max(0,energy);
+ document.getElementById("completed").innerHTML=completed.map(s=>"✔ "+s).join("<br>");
+}
+
+function checkGameOver(){
+ if(time<=0||money<=0||energy<=0){
+  endGame("GAME OVER");
+ }
 }
 
 function endGame(msg){
- gameEnded=true;
+ gameOver=true;
  document.getElementById("event").style.display="block";
  document.getElementById("event").innerHTML="<h3>"+msg+"</h3>";
- document.getElementById("restart").style.display="block";
  document.getElementById("buttons").innerHTML="";
+ document.getElementById("restart").style.display="block";
 }
 
-function checkGame(){
- if(time<=0||money<=0||energy<=0) endGame("GAME OVER");
- if(index===correct.length) endGame("🏡 HOUSE COMPLETED!");
-}
-
-/* EVENTS — only once each */
+/* RANDOM EVENTS — rare & once only */
 let events=["grap","rain","mcd"];
-let eventsToTrigger=Math.floor(Math.random()*2)+1;
-
-setTimeout(triggerEvent,12000);
-setTimeout(triggerEvent,25000);
+let triggers=Math.floor(Math.random()*2)+1;
+setTimeout(triggerEvent,15000);
+setTimeout(triggerEvent,30000);
 
 function triggerEvent(){
- if(gameEnded||eventsToTrigger<=0||events.length==0) return;
- eventsToTrigger--;
+ if(gameOver||triggers<=0||events.length===0) return;
+ triggers--;
  let e=events.splice(Math.floor(Math.random()*events.length),1)[0];
  window[e]();
 }
@@ -132,27 +144,22 @@ function showEvent(text,op1,op2){
 
 function closeEvent(){
  document.getElementById("event").style.display="none";
- updateStats();checkGame();
+ updateUI();
+ checkGameOver();
 }
 
-function grap(){
- showEvent("GRAP 3 imposed! Stop work 7 days or continue illegally?",
- "time-=7;closeEvent()",
- "money-=200;closeEvent()");
-}
-function rain(){
- showEvent("Rainstorm! Pay ₹500 cover or stop 2 days?",
- "money-=500;closeEvent()",
- "time-=2;closeEvent()");
-}
-function mcd(){
- showEvent("MCD complaint! Pay ₹300 or stop 3 days?",
- "money-=300;closeEvent()",
- "time-=3;closeEvent()");
-}
+function grap(){showEvent("GRAP 3 imposed! Stop work 7 days or continue illegally?",
+"time-=7;closeEvent()","money-=200;closeEvent()");}
+
+function rain(){showEvent("Rainstorm! Pay ₹500 cover or stop 2 days?",
+"money-=500;closeEvent()","time-=2;closeEvent()");}
+
+function mcd(){showEvent("MCD complaint! Pay ₹300 or stop 3 days?",
+"money-=300;closeEvent()","time-=3;closeEvent()");}
 
 drawButtons();
-updateStats();
+updateUI();
 </script>
+
 </body>
 </html>
