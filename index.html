@@ -1,161 +1,164 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Build A House</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;700;900&display=swap" rel="stylesheet">
+<title>Build A House</title>
 
 <style>
-body{
-  font-family:Lato;
-  background:#000;
-  color:#fff;
-  text-align:center;
-  padding:10px;
-}
-*{color:#fff;}
-
-h1{font-size:42px;font-weight:900;margin:10px;}
-
-button{
-  padding:12px;
-  margin:6px;
-  border:2px solid #fff;
-  background:#000;
-  color:#fff;
-  font-size:16px;
-  width:90%;
-  max-width:420px;
-}
-
-.stats{font-weight:700;margin:10px;font-size:18px;}
-.done{font-size:14px;margin:10px;font-weight:700;}
-
-.popup{
-  position:fixed;
-  top:0;left:0;width:100%;height:100%;
-  background:rgba(0,0,0,0.95);
-  display:none;
-  justify-content:center;
-  align-items:center;
-  flex-direction:column;
-  padding:20px;
-}
+body{font-family:Lato,sans-serif;background:#000;color:#fff;text-align:center;padding:10px;}
+h1{font-size:46px;font-weight:900;margin:5px;}
+.container{max-width:650px;margin:auto;}
+.stats{display:flex;justify-content:space-between;font-weight:700;margin:10px 0;}
+button{width:100%;padding:14px;margin:6px 0;border:2px solid white;background:black;color:white;font-size:16px;cursor:pointer;}
+#penalty{display:none;border:3px solid white;padding:10px;margin:10px;font-weight:bold;}
+.eventBox{border:3px dashed white;padding:12px;margin:10px;display:none;}
+#restart{display:none;margin-top:15px;font-weight:bold;}
 </style>
 </head>
 
 <body>
+<div class="container">
 
 <h1>BUILD A HOUSE</h1>
+<p>Finish all steps in correct order before resources run out.</p>
 
-<div class="stats" id="stats"></div>
-<div class="done" id="doneSteps"></div>
-<div id="game"></div>
-
-<div class="popup" id="popup">
-  <div id="popupText"></div>
-  <button onclick="closePopup()">OK</button>
+<div class="stats">
+<div>Days: <span id="time">28</span></div>
+<div>₹: <span id="money">1500</span></div>
+<div>Energy: <span id="energy">120</span></div>
 </div>
 
-<div class="popup" id="endPopup">
-  <div id="endText"></div>
-  <button onclick="location.reload()">Play Again</button>
+<div id="penalty">⚠ Wrong Step! -4 Days | -₹100 | -20 Energy</div>
+
+<h3>Completed Steps</h3>
+<div id="completed"></div>
+
+<div id="event" class="eventBox"></div>
+<div id="buttons"></div>
+
+<button id="restart" onclick="location.reload()">PLAY AGAIN</button>
+
 </div>
 
 <script>
-const correctOrder=[
-"Clean land","Build base","Build frame","Add walls","Add roof",
-"Add doors/windows","Add water system","Add electricity",
-"Turn on lights","Paint house","Finish floors","House ready"
-];
+let time=28,money=1500,energy=120;
+let steps=["Clean land","Build base","Build frame","Add walls","Add roof",
+"Add doors/windows","Add water system","Add electricity","Turn on lights",
+"Paint house","Finish floors","House ready"];
 
-let steps=[...correctOrder].sort(()=>Math.random()-0.5);
-let time=28, money=1500, energy=120;
-let current=0;
-let done=[];
-let usedEvents=[];
+let correct=[...steps];
+shuffle(steps);
+let completed=[];
+let gameOver=false;
 
-function updateStats(){
-stats.innerHTML=`Time: ${time} days | Money: ₹${money} | Energy: ${energy}`;
-doneSteps.innerHTML="Completed: "+done.join(", ");
-if(time<=0||money<=0||energy<=0) endGame("GAME OVER");
+function shuffle(a){
+ for(let i=a.length-1;i>0;i--){
+  let j=Math.floor(Math.random()*(i+1));
+  [a[i],a[j]]=[a[j],a[i]];
+ }
 }
 
-function popup(msg){
-popupText.innerHTML=msg;
-document.getElementById("popup").style.display="flex";
-}
-
-function closePopup(){
-document.getElementById("popup").style.display="none";
-triggerEvent();
-}
-
-function endGame(msg){
-endText.innerHTML=msg;
-document.getElementById("endPopup").style.display="flex";
-}
-
-function penalty(){
-time-=4; money-=100; energy-=20;
-popup("Wrong step! Penalty applied.");
-updateStats();
+function drawButtons(){
+ if(gameOver) return;
+ let box=document.getElementById("buttons");
+ box.innerHTML="";
+ steps.forEach(step=>{
+  if(!completed.includes(step)){
+   let btn=document.createElement("button");
+   btn.innerText=step;
+   btn.onclick=()=>choose(step);
+   box.appendChild(btn);
+  }
+ });
 }
 
 function choose(step){
-if(step===correctOrder[current]){
-  done.push(step);
-  current++;
-  time-=2; energy-=10;
-  if(current===correctOrder.length) return endGame("🎉 YOU WON 🎉");
-}else penalty();
+ if(gameOver) return;
 
-updateStats();
-render();
+ completed.push(step);
+
+ if(step===correct[completed.length-1]){
+  time-=2; energy-=10; money-=50;
+ }else{
+  time-=4; energy-=20; money-=100;
+  showPenalty();
+ }
+
+ updateUI();
+ checkGameOver();
+ drawButtons();
+
+ if(!gameOver && completed.length===correct.length){
+   endGame("🏡 HOUSE COMPLETED!");
+ }
 }
 
-function render(){
-game.innerHTML="";
-steps.forEach(s=>{
- if(!done.includes(s))
- game.innerHTML+=`<button onclick="choose('${s}')">${s}</button>`;
-});
+function showPenalty(){
+ let p=document.getElementById("penalty");
+ p.style.display="block";
+ setTimeout(()=>p.style.display="none",2000);
 }
 
-const events=[
-{
-name:"GRAP",
-run:()=>{
-let c=confirm("GRAP 3! Continue illegally (OK) or stop 7 days (Cancel)");
-if(!c) time-=7;
+function updateUI(){
+ document.getElementById("time").innerText=Math.max(0,time);
+ document.getElementById("money").innerText=Math.max(0,money);
+ document.getElementById("energy").innerText=Math.max(0,energy);
+ document.getElementById("completed").innerHTML=completed.map(s=>"✔ "+s).join("<br>");
 }
-},
-{
-name:"RAIN",
-run:()=>{
-let c=confirm("Rainstorm! Pay ₹500 (OK) or stop 2 days (Cancel)");
-if(c) money-=500; else time-=2;
+
+function checkGameOver(){
+ if(time<=0||money<=0||energy<=0){
+  endGame("GAME OVER");
+ }
 }
-},
-{
-name:"MCD",
-run:()=>{
-let c=confirm("MCD complaint! Pay ₹300 (OK) or stop 3 days (Cancel)");
-if(c) money-=300; else time-=3;
+
+function endGame(msg){
+ gameOver=true;
+ document.getElementById("event").style.display="block";
+ document.getElementById("event").innerHTML="<h3>"+msg+"</h3>";
+ document.getElementById("buttons").innerHTML="";
+ document.getElementById("restart").style.display="block";
 }
-}
-];
+
+/* RANDOM EVENTS — rare & once only */
+let events=["grap","rain","mcd"];
+let triggers=Math.floor(Math.random()*2)+1;
+setTimeout(triggerEvent,15000);
+setTimeout(triggerEvent,30000);
 
 function triggerEvent(){
-if(Math.random()<0.25 && usedEvents.length<events.length){
- let e=events.find(x=>!usedEvents.includes(x.name));
- if(e){ usedEvents.push(e.name); e.run(); updateStats(); }
-}
+ if(gameOver||triggers<=0||events.length===0) return;
+ triggers--;
+ let e=events.splice(Math.floor(Math.random()*events.length),1)[0];
+ window[e]();
 }
 
-updateStats();
-render();
+function showEvent(text,op1,op2){
+ let box=document.getElementById("event");
+ box.style.display="block";
+ box.innerHTML=`<p>${text}</p>
+ <button onclick="${op1}">Option 1</button>
+ <button onclick="${op2}">Option 2</button>`;
+}
+
+function closeEvent(){
+ document.getElementById("event").style.display="none";
+ updateUI();
+ checkGameOver();
+}
+
+function grap(){showEvent("GRAP 3 imposed! Stop work 7 days or continue illegally?",
+"time-=7;closeEvent()","money-=200;closeEvent()");}
+
+function rain(){showEvent("Rainstorm! Pay ₹500 cover or stop 2 days?",
+"money-=500;closeEvent()","time-=2;closeEvent()");}
+
+function mcd(){showEvent("MCD complaint! Pay ₹300 or stop 3 days?",
+"money-=300;closeEvent()","time-=3;closeEvent()");}
+
+drawButtons();
+updateUI();
 </script>
 
 </body>
